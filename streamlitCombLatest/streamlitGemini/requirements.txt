@@ -1,0 +1,15 @@
+streamlit
+langchain
+langchain-openai
+langchain-community
+openai
+duckduckgo-search
+sqlalchemy
+langchain-google-genai
+ollama-haystack
+markdown-it-py 
+mdit_plain 
+pypdf
+gdown
+haystack-ai
+haystack
