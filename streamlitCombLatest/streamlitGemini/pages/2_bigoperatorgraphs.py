@@ -81,24 +81,15 @@ class ProjectAnalyzer(ast.NodeVisitor):
         for child in node.children:
             print(node.children)
             self.print_tree(child, indent + "    ")
-"""
-nodes.append(StreamlitFlowNode(str(self.node_count), 
-                    (250, 200*(self.node_count-1)/len(files)), 
-                    {'content': node.name}, 
-                    'default', 
-                    'right', 
-                    'left', 
-                    draggable=False))
-edges.append(StreamlitFlowEdge(f'1-{str(self.node_count)}', '1', str(self.node_count), animated=True, marker_end={'type': 'arrow'}))
-"""  
+
 
 def visualize_project(project_root: str) -> None:
     analyzer = ProjectAnalyzer(project_root)
     analyzer.analyze()
-    analyzer.print_tree(analyzer.root_node)
+    #analyzer.print_tree(analyzer.root_node)
 
 if __name__ == "__main__":
-    project_root = "sepmanalyzer"
+    project_root = "operators/Sepm_Analyzer"
     nodes = [StreamlitFlowNode( id='1', 
                             pos=(100, 100), 
                             data={'content': project_root}, 

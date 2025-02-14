@@ -13,3 +13,4 @@ pypdf
 gdown
 haystack-ai
 haystack
+google-ai-haystack

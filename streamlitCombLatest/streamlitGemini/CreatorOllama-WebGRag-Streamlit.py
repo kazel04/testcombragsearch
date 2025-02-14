@@ -5,10 +5,14 @@ import re
 #from vector_store import make_prompt, auto_search
 import os
 import gdown
+from dotenv import load_dotenv
 
+load_dotenv()
 
+os.environ["GOOGLE_API_KEY"] = os.getenv("GOOGLE_API_KEY")
+ngrock_url = os.getenv("ngrock_ollama_url")
 
-def create_operator(name, tasks,googlekey):
+def create_operator(name, tasks,googlekey, use_gemini=False):
     """Create a new operator with specified tasks."""
     # Configure the GDrive & preprocessing pipeline
     #runs well on colab but not on local comp? see if still have issues after dockerising.. 
@@ -26,6 +30,7 @@ def create_operator(name, tasks,googlekey):
     from haystack import Pipeline
     from haystack.document_stores.in_memory import InMemoryDocumentStore
     from haystack_integrations.components.embedders.ollama import OllamaDocumentEmbedder
+    from haystack_integrations.components.generators.google_ai import GoogleAIGeminiGenerator
 
     document_store = InMemoryDocumentStore()
     file_type_router = FileTypeRouter(mime_types=["text/plain", "application/pdf", "text/markdown"])
@@ -37,7 +42,7 @@ def create_operator(name, tasks,googlekey):
     document_cleaner = DocumentCleaner()
     document_splitter = DocumentSplitter(split_by="word", split_length=150, split_overlap=50)
 
-    document_embedder = OllamaDocumentEmbedder(model="mxbai-embed-large", url="https://accepted-briefly-stallion.ngrok-free.app") # This is the default model and URL
+    document_embedder = OllamaDocumentEmbedder(model="mxbai-embed-large", url=ngrock_url) # This is the default model and URL
     document_writer = DocumentWriter(document_store)
 
     preprocessing_pipeline = Pipeline()
@@ -124,7 +129,12 @@ Query: {{query}}
     self_reflecting_agent = Pipeline(max_runs_per_component=1) 
     self_reflecting_agent.add_component("retriever", InMemoryBM25Retriever(document_store=document_store, top_k=3))
     self_reflecting_agent.add_component("prompt_builder_for_agent", PromptBuilder(template=agent_prompt_template))
-    self_reflecting_agent.add_component("llm_for_agent", OllamaGenerator(model="deepseek-r1:14b", url = "https://accepted-briefly-stallion.ngrok-free.app"))
+    #self_reflecting_agent.add_component("llm_for_agent", OllamaGenerator(model="deepseek-r1:14b", url = "https://accepted-briefly-stallion.ngrok-free.app"))
+    if use_gemini:
+        self_reflecting_agent.add_component("llm_for_agent", GoogleAIGeminiGenerator(model="gemini-1.5-flash-latest"))
+    else:
+        self_reflecting_agent.add_component("llm_for_agent", OllamaGenerator(model="deepseek-r1:14b", url=ngrock_url))
+
     self_reflecting_agent.add_component("web_search", SerperDevWebSearch())
     self_reflecting_agent.add_component("router", ConditionalRouter(main_routes))
 
@@ -140,7 +150,7 @@ Query: {{query}}
 
     try:
         # Create the directory
-        os.mkdir(name)
+        os.mkdir("operators/"+name)
         # Define the activation script content
         script_content = """import os
 import subprocess
@@ -162,7 +172,7 @@ if __name__ == "__main__":
 """
         # Save the script content to a file
         file_name = "activationscript.py"
-        file_path = os.path.join(name, file_name)
+        file_path = os.path.join("operators/"+name, file_name)
         with open(file_path, "w") as file:
             file.write(script_content)
     except FileExistsError:
@@ -186,7 +196,7 @@ if __name__ == "__main__":
    #Generate code script based on the task_list, ready for activation
     file_name = "genscripts.py"
     #if alr have genscripts, generate genscripts 2 etc (Multiple task lists feature TBD!)
-    file_path = os.path.join(name, file_name)
+    file_path = os.path.join("operators",name, file_name)
     with open(file_path, "w") as file:
         file.write(task_list)
 
@@ -220,10 +230,11 @@ def main():
     googlekey = st.text_input("Google Drive Folder Link:")
     operator_name = st.text_input("Enter the name of the new Operator:")
     tasks_input = st.text_area("List the tasks you want this Operator to perform:")
+    use_gemini = st.checkbox("Gemini (Oh no I ran out of google colab and for testing)")
 
     if st.button("Create Operator"):
         if operator_name and tasks_input:
-            create_operator(operator_name, tasks_input, googlekey)
+            create_operator(operator_name, tasks_input, googlekey,use_gemini)
 
         else:
             st.error("Please provide both the operator name and tasks.")
